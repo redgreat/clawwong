@@ -86,6 +86,50 @@ openclaw configure
 3. API Base URL → `http://127.0.0.1:11434/v1`
 4. Model name → `qwen2.5:7b`
 
+### 5. Web 控制台与外网访问 (NAS/DDNS 穿透)
+
+OpenClaw 默认带有本机的 Web 可视化工作台（Dashboard），提供系统状态监控、运行日志查看和模型设置功能。
+
+**控制台地址**：`http://127.0.0.1:18789` （默认仅限本机访问）
+
+如果需要通过 NAS 或者路由器的 DDNS 将控制台映射到外网，并解决因为非 HTTPS 环境而被浏览器拦截认证的问题，请执行以下命令：
+
+```bash
+# 1. 允许局域网其他设备访问（将绑定地址从 loopback 改为 lan 或者 all）
+openclaw config set gateway.bind lan
+
+# 2. 允许所有来源域名的跨域请求
+openclaw config set gateway.controlUi.allowedOrigins '["*"]'
+
+# 3. （可选，针对只有 HTTP 而没有 HTTPS 证书的 NAS）允许在不安全的网络下强制使用令牌认证
+openclaw config set gateway.controlUi.allowInsecureAuth true
+
+# 4. （关键）彻底关闭前端控制台对设备“指纹”的硬性要求，允许单纯用 Token 穿透
+openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth true
+
+# 5. 获取本机网关的唯一安全登录令牌 Token (请做好保密)
+openclaw config get gateway.auth.token
+
+# 6. 生效配置
+openclaw gateway restart
+```
+**如何在外网直接登录**：
+拿到 Token 后，在任意浏览器中（建议无痕模式首次打开缓存防串）用如下带参数的方式访问你配置的外网地址：
+`http://你的外网域名:转发的端口/#token=你的那串长长的Token值` （即可秒下认证）。
+
+### 6. 更换/添加第三方云端大模型 (如 DeepSeek)
+
+如果你发现本地的 Qwen 模型较慢或能力不够，希望在 Web 端使用速度快且更强大的第三方模型（比如 DeepSeek V3、Kimi 或者通义千问），直接在终端执行添加 provider 即可：
+
+```bash
+# 添加 DeepSeek 官方接口为例：
+openclaw config add-provider deepseek --base-url "https://api.deepseek.com/v1" --api-key "sk-你的APIKEY" --model-ids "deepseek-chat" --model-name "DeepSeek-V3" --alias deepseek
+
+# 重启网关后生效
+openclaw gateway restart
+```
+配置完成后去 Web 控制台的 `Agent（代理）` 页面，点击原有的模型选中下拉框，就能看到新增加的 `deepseek-chat`，选中并点击右下角 `Save` 即刻切换完毕。
+
 ---
 
 ## 遇到的问题 & 解决方案
